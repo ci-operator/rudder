@@ -1,0 +1,12 @@
+galaxy_info:
+  author: ci-operator
+  description: Process a Helm chart pulled from a git repo, track updates in a configmap, and process the template with supplied values.yml overrides. Idempotency implemented with a stored resource definition cache, and volume dependencies are detected to trigger the pods that mount them to have an update triggered too. For each resource object in the processed template that changed or had a mounted secret, configmap, or pvc changed, add a dynamic inventory host to the playbook run, supplying the resource object specification in the 'resource' var.  
+  license: "MIT"
+  min_ansible_version: 2.8
+  platforms:
+  - name: EL
+    versions:
+    - 8
+  galaxy_tags:
+    - openshift
+    - kubernetes

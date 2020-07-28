@@ -1,0 +1,14 @@
+apiVersion: v1
+data:
+  app_params: |-
+{% for key, val in (apps_params[app_name]|default(app_params)).items() %}
+    {{ key }}: {{ val }}
+{% endfor %}
+  app_repo: {{ app_repo }}
+  app_commit: '{{ app_commit }}'
+  app_branch: '{{ app_branch }}'
+  app_chart: {{ app_chart }}
+  app_owner: {{ app_owner }}
+kind: ConfigMap
+metadata:
+  name: app-config-{{ app_name }}
