@@ -1,6 +1,6 @@
 namespace: ci-operator
 name: rudder
-version: 0.0.1
+version: 0.2.0
 readme: README.md
 authors:
   - josiah@redhat.com
