@@ -136,7 +136,8 @@
     content: "apiVersion:{{' '}}kustomize.config.k8s.io/v1beta1\nresources:\n{% for tmpl in (app_templated_files.results|map(attribute='item')|list) %}  - {{ tmpl }}\n{% endfor %}"
   when: app_kustom_dir.results[0].stat.exists|default(false)
   with_items: #Display Only
-    - "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ app_name }}/kustomization.yaml"
+    - "{{ mgmt_dir }}/{{ inventory_hostname }}/helm/{{ app_name }}/kustomization.yaml"
+    # - "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ app_name }}/kustomization.yaml"
 
 
 #FIXTHIS
