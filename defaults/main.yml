@@ -6,4 +6,3 @@ app_params: "{{ apps_params[app_name] }}"
 # app_values: "{{ (app_config|default(dict([('data', dict([('app_params', {})]))])))['data']['app_params']|from_yaml|default(dict())|combine(apps_params[app_name]|default(app_params|default('{}'))|from_yaml) }}"
 app_values: "{{ (app_config|default(dict([('data', dict([('app_params', {})]))])))['data']['app_params']|from_yaml|default(dict())|combine(app_params|default('{}')|from_yaml) }}"
 
-app_values_file: "{{ app_name }}-values.yaml"
