@@ -46,16 +46,16 @@
   set_fact:
     app_config: "{{ app_config_cm.stdout|from_yaml }}"
     app_values_url: "{{ app_repo|regex_replace('git@(.*):(.*).git','https://\\1/\\2') }}/raw/{{ app_branch|default('master') }}/{{ app_name }}-values.yaml"
-  # when: app_config_cm.rc == 0
-  when: app_config_cm is success
+  when: app_config_cm.rc == 0
+  # when: app_config_cm is success
 
 - name: Check for app changes
   debug: msg="{{ app_config.data[item]|default('') != vars[item]|default(omit) }}"
   ignore_errors: true
   changed_when: (app_config.data[item]|default('') != vars[item]|default(omit))
   register: app_variance
-  # when: app_config_cm.rc == 0
-  when: app_config_cm is success
+  when: app_config_cm.rc == 0
+  # when: app_config_cm is success
   loop:
     - app_repo
     - app_branch
