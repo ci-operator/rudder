@@ -13,12 +13,12 @@
 
 - name: Local deployment management directory exists
   file:
-    path: "{{ item }}/resources"
+    path: "{{ item }}"
     state: directory
     recurse: true
   register: app_mgmt_dir
   with_items: # Display Only
-    - "{{ mgmt_dir }}/{{ inventory_hostname }}"
+    - "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ app_name }}"
 
 - name: Collect commit ref for repo branch head
   shell: git ls-remote {{ item.repo }} {{ item.branch }} | head -c 8
@@ -129,9 +129,6 @@
   register: app_kustom_dir
   with_items: # Display Only
     - "{{ app_name }}"
-
-- name: TEST THIS
-  debug: msg="{{ app_templated_files.results|map(attribute='item')|list }}"
 
 - name: Kustomize base object list stored
   copy:
