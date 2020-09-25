@@ -45,7 +45,7 @@
 - name: Existing app config loaded
   set_fact:
     app_config: "{{ app_config_cm.stdout|from_yaml }}"
-    app_values_url: "{{ app_repo|regex_replace('git@(.*):(.*).git','https://\\1/\\2') }}/raw/{{ app_branch|default('master') }}/{{ app_value_file|default(app_name) }}-values.yaml"
+    app_values_url: "{{ app_repo|regex_replace('git@(.*):(.*).git','https://\\1/\\2') }}/raw/{{ app_branch|default('master') }}/{{ app_values_file }}"
   # when: app_config_cm.rc == 0
   when: app_config_cm is success
 
@@ -105,9 +105,9 @@
 - name: Chart values fetched
   get_url:
     url: "{{ item }}"
-    dest: "{{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_value_file|default(app_name) }}-values.yaml"
+    dest: "{{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_values_file }}"
   with_items: # Display Only
-    - "{{ app_repo|regex_replace('(git@|https://)([A-Za-z0-9\\.-]*):?(.*).git','https://\\2/\\3') }}/raw/{{ app_branch|default('master') }}/{{ app_value_file|default(app_name) }}-values.yaml"
+    - "{{ app_repo|regex_replace('(git@|https://)([A-Za-z0-9\\.-]*):?(.*).git','https://\\2/\\3') }}/raw/{{ app_branch|default('master') }}/{{ app_values_file }}"
 
 - name: Helm chart templated
   command: cat "{{ item }}"
@@ -117,7 +117,7 @@
   register: app_templated_files
   when: item|length > 0
   with_lines:
-    - /usr/local/bin/helm template {{ release }} {{ app_chart }} --version {{ app_version }} --debug -f {{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_value_file|default(app_name) }}-values.yaml {% for param in (app_values|default({})|dict2items) %}--set {{ param.key }}="{{ param.value }}" {% endfor %} --output-dir {{ mgmt_dir }}/{{ inventory_hostname }}/helm | sed 's/^wrote //' | head -n -1 | xargs awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/helm/" '/\-\-\-/{d++;next};/^#/{f=mgmt"/"$3;next};{print f"-"d;print >f"-"d}' | uniq
+    - /usr/local/bin/helm template {{ release }} {{ app_chart }} --version {{ app_version }} --debug -f {{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_values_file }} {% for param in (app_values|default({})|dict2items) %}--set {{ param.key }}="{{ param.value }}" {% endfor %} --output-dir {{ mgmt_dir }}/{{ inventory_hostname }}/helm | sed 's/^wrote //' | head -n -1 | xargs awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/helm/" '/\-\-\-/{d++;next};/^#/{f=mgmt"/"$3;next};{print f"-"d;print >f"-"d}' | uniq
 
 - name: Manifest normalized
   set_fact:
