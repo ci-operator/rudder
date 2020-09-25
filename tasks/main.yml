@@ -39,8 +39,8 @@
                (app_config_cm.stderr|default('') is not search('NotFound'))
   register: app_config_cm
 
-# - name: App Config found
-#   debug: var=app_config_cm.stdout_lines
+- name: App Config found
+  debug: var=app_config_cm.stdout_lines
 
 - name: Existing app config loaded
   set_fact:
@@ -51,6 +51,7 @@
 
 - name: Check for app changes
   debug: msg="{{ app_config.data[item]|default('') != vars[item]|default(omit) }}"
+  # debug: msg="{{ app_config.data[item]|default('') }} !=  {{ vars[item]|default(omit) }}"
   ignore_errors: true
   changed_when: (app_config.data[item]|default('') != vars[item]|default(omit))
   register: app_variance
