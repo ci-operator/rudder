@@ -1,8 +1,9 @@
 # app_name: "{{ app_chart|regex_replace('.*/','') }}"
-# app_params: "{{ apps_params[app_value_file|default(app_name)] }}"
-app_params: "{{ apps_params[app_name] }}"
+app_params: "{{ apps_params[app_value_file|default(app_name)] }}"
+# app_params: "{{ apps_params[app_name] }}"
 
 # Values dictionary collected from 'app_config' (an optional string of YAML) merged with precedence for supplied 'app-params[app-name]'
-# app_values: "{{ (app_config|default(dict([('data', dict([('app_params', {})]))])))['data']['app_params']|from_yaml|default(dict())|combine(apps_params[app_name]|default(app_params|default('{}'))|from_yaml) }}"
-app_values: "{{ (app_config|default(dict([('data', dict([('app_params', {})]))])))['data']['app_params']|from_yaml|default(dict())|combine(app_params|default('{}')|from_yaml) }}"
+app_values: "{{ (app_config|default(dict([('data', dict([('app_params', {})]))])))['data']['app_params']|from_yaml|default(dict())|combine(apps_params[app_name]|default(app_params|default('{}'))|from_yaml) }}"
+# app_values: "{{ (app_config|default(dict([('data', dict([('app_params', {})]))])))['data']['app_params']|from_yaml|default(dict())|combine(app_params|default('{}')|from_yaml) }}"
 
+# app_values_file: "{{ app_name }}-values.yaml"
