@@ -130,6 +130,9 @@
   with_items: # Display Only
     - "{{ app_name }}"
 
+- name: TEST THIS
+  debug: msg="{{ app_templated_files.results|map(attribute='item')|list }}"
+
 - name: Kustomize base object list stored
   copy:
     dest: "{{ item }}"
@@ -137,6 +140,16 @@
   when: app_kustom_dir.results[0].stat.exists|default(false)
   with_items: #Display Only
     - "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ app_name }}/kustomization.yaml"
+
+
+#FIXTHIS
+# - name: Kustomize base object list stored
+#   copy:
+#     dest: "{{ item }}"
+#     content: "apiVersion:{{' '}}kustomize.config.k8s.io/v1beta1\nresources:\n{% for i in ((app_file_processed.stdout|from_yaml)['items']) %}  - {{ k8s_env }}.{{ i.kind|lower }}.{{ i.metadata.name }}.yml\n{% endfor %}"
+#   when: app_kustom_dir.results[0].stat.exists|default(false)
+#   with_items: #Display Only
+#     - "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ app_name }}/kustomization.yaml"
 
 - name: Kustomization output directories exists
   file:
