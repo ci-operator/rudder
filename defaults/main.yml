@@ -2,4 +2,4 @@
 app_params: "{{ apps_params[app_value_file|default(app_name)] }}"
 
 # Values dictionary collected from 'app_config' (an optional string of YAML) merged with precedence for supplied 'app-params[app-name]'
-app_values: "{{ (app_config|default(dict([('data', dict([('app_params', {})]))])))['data']['app_params']|from_yaml|default(dict())|combine(apps_params[app_name]|default(app_params|default('{}'))|from_yaml) }}"
+app_values: "{{ (app_config|default(dict([('data', dict([('app_params', dict())]))])))['data']['app_params']|from_yaml|combine(apps_params[app_name]|default(app_params|default('{}'))|from_yaml) }}"
