@@ -166,6 +166,7 @@
   register: app_kustom_build
   loop: "{{ [ app_kustom_dir.results[0].stat.exists|default(false)|ternary(mgmt_dir +'/kustom-'+ app_name, []), kustom_repos[app_name]|default([]), kustom_repos[inventory_hostname]|default([]) ]|flatten }}"
 
+- debug: var=app_kustom_build
 - name: Kustomized resource objects stored
   copy:
     content: "{{ item|to_nice_yaml }}"
@@ -175,6 +176,8 @@
   loop_control:
     label: "{{ item.kind }}/{{ item.metadata.name }}"
   loop: "[{% for file in app_kustom_build.results[0].stdout_lines|default([]) %}{{ lookup('file', file)|from_yaml }}{% if not loop.last -%}, {% endif %}{% endfor %}]"
+
+- debug: var=app_kustom_files
 
 - name: Templated resource objects stored
   copy:
