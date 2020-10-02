@@ -39,24 +39,21 @@
                (app_config_cm.stderr|default('') is not search('NotFound'))
   register: app_config_cm
 
-- name: App Config found
-  debug: var=app_config_cm.stdout_lines
+# - name: App Config found
+#   debug: var=app_config_cm.stdout_lines
 
 - name: Existing app config loaded
   set_fact:
     app_config: "{{ app_config_cm.stdout|from_yaml }}"
     app_values_url: "{{ app_repo|regex_replace('git@(.*):(.*).git','https://\\1/\\2') }}/raw/{{ app_branch|default('master') }}/{{ app_name }}-values.yaml"
   when: app_config_cm.rc == 0
-  # when: app_config_cm is success
 
 - name: Check for app changes
   debug: msg="{{ app_config.data[item]|default('') != vars[item]|default(omit) }}"
-  # debug: msg="{{ app_config.data[item]|default('') }} !=  {{ vars[item]|default(omit) }}"
   ignore_errors: true
   changed_when: (app_config.data[item]|default('') != vars[item]|default(omit))
   register: app_variance
   when: app_config_cm.rc == 0
-  # when: app_config_cm is success
   loop:
     - app_repo
     - app_branch
@@ -86,7 +83,7 @@
 - name: Application Values to be used
   debug: var=app_values
 
-# - name: Check for Parameter changes # Broken
+# - name: Check for Parameter changes # Broken - FixThis with base64
 #   debug: msg="{{ item != lookup('vars', 'app_params') }}"
 #   ignore_errors: true
 #   register: app_param_variance
@@ -137,18 +134,7 @@
     content: "apiVersion:{{' '}}kustomize.config.k8s.io/v1beta1\nresources:\n{% for tmpl in (app_templated_files.results|map(attribute='item')|list) %}  - {{ tmpl }}\n{% endfor %}"
   when: app_kustom_dir.results[0].stat.exists|default(false)
   with_items: #Display Only
-    - "{{ mgmt_dir }}/{{ inventory_hostname }}/helm/{{ app_name }}/kustomization.yaml"
-    # - "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ app_name }}/kustomization.yaml"
-
-
-#FIXTHIS
-# - name: Kustomize base object list stored
-#   copy:
-#     dest: "{{ item }}"
-#     content: "apiVersion:{{' '}}kustomize.config.k8s.io/v1beta1\nresources:\n{% for i in ((app_file_processed.stdout|from_yaml)['items']) %}  - {{ k8s_env }}.{{ i.kind|lower }}.{{ i.metadata.name }}.yml\n{% endfor %}"
-#   when: app_kustom_dir.results[0].stat.exists|default(false)
-#   with_items: #Display Only
-#     - "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ app_name }}/kustomization.yaml"
+    - "{{ mgmt_dir }}/{{ inventory_hostname }}/helm/{{ app_name }}/templates/kustomization.yaml"
 
 - name: Kustomization output directories exists
   file:
@@ -163,10 +149,10 @@
 - name: Application Kustomization built
   shell: /usr/local/bin/kustomize build {{ item }} | awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/kustom/{{ app_name }}" 'BEGIN{RS="---"} { i = 0; while ( i <= NF ) { if ($i ~ /^apiVersion:?$/) { kind = 0; name = 0 }; if (kind == 0 && $i ~ /^kind:?$/) { k = tolower($(i+1)); kind = 1; name = 0 }; if ( kind == 1 && name == 0 && $i ~ /^name:?$/) { n = $(i+1); name = 1; print mgmt"/"k"."n".yml"; print > mgmt"/"k"."n".yml"}; i += 1}}'
   changed_when: false
+  failed_when: app_kustom_build.stderr|default('') is match('Error')
   register: app_kustom_build
   loop: "{{ [ app_kustom_dir.results[0].stat.exists|default(false)|ternary(mgmt_dir +'/kustom-'+ app_name, []), kustom_repos[app_name]|default([]), kustom_repos[inventory_hostname]|default([]) ]|flatten }}"
 
-- debug: var=app_kustom_build
 - name: Kustomized resource objects stored
   copy:
     content: "{{ item|to_nice_yaml }}"
@@ -177,8 +163,6 @@
     label: "{{ item.kind }}/{{ item.metadata.name }}"
   loop: "[{% for file in app_kustom_build.results[0].stdout_lines|default([]) %}{{ lookup('file', file)|from_yaml }}{% if not loop.last -%}, {% endif %}{% endfor %}]"
 
-- debug: var=app_kustom_files
-
 - name: Templated resource objects stored
   copy:
     dest: "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ k8s_env }}.{{ item.kind|lower }}.{{ item.metadata.name }}.yml"
@@ -187,8 +171,11 @@
   register: app_spec_stored
   loop_control:
     label: "{{ item.kind }}/{{ item.metadata.name }}"
-  # loop: "{{ app_specs ) }}"
   loop: "{{ (app_kustom_dir.results[0].stat.exists|default(false))|ternary( app_kustom_files.results|map(attribute='item')|list, app_specs ) }}"
+
+# - name: LOOP
+#   debug: msg="{{ (app_kustom_dir.results[0].stat.exists|default(false))|ternary( app_kustom_files.results|map(attribute='item')|list, app_specs ) }}"
+# - debug: var=app_spec_stored
 
 - name: Volume dependencies found
   set_fact:
