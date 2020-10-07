@@ -131,7 +131,7 @@
   debug:
     msg: "{{ kustom_repos[item] }}"
   register: app_kustomizer
-  when: (not app_kustom_dir.results[0].stat.exists|default(false)) and (kustom_repos[item] is defined)
+  when: (app_kustom_dir.results[0].stat.exists|default(false)) or (kustom_repos[item] is defined)
   loop: 
     - "{{ app_name }}"
     - "{{ inventory_hostname }}"
