@@ -129,7 +129,7 @@
 
 - name: Application Kustomization repo active
   debug:
-    msg: "{{ kustom_repos[item] }}"
+    msg: "{{ kustom_repos[item]|default('Undefined') }}"
   register: app_kustomizer
   when: (app_kustom_dir.results[0].stat.exists|default(false)) or (kustom_repos[item] is defined)
   loop: 
