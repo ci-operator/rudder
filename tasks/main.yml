@@ -122,7 +122,7 @@
 
 - name: Application Kustomization detection
   stat:
-    path: "{{ mgmt_dir }}/kustom-{{ app_name }}/kustomization.yaml"
+    path: "{{ kustomize_dir|default(mgmt_dir) }}/kustom-{{ app_name }}/kustomization.yaml"
   register: app_kustom_dir
   with_items: # Display Only
     - "{{ app_name }}"
@@ -154,12 +154,16 @@
     - "{{ mgmt_dir }}/{{ inventory_hostname }}/kustom/{{ app_name }}"
     - "{{ mgmt_dir }}/{{ inventory_hostname }}/final/{{ app_name }}"
 
+- name: Application Kustomizations
+  debug:
+    msg: "{{ [ app_kustom_dir.results[0].stat.exists|default(false)|ternary(kustomize_dir|default(mgmt_dir) +'/kustom-'+ app_name, []), kustom_repos[app_name]|default([]), kustom_repos[inventory_hostname]|default([]) ]|flatten }}"
+
 - name: Application Kustomization built
   shell: /usr/local/bin/kustomize build {{ item }} | awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/kustom/{{ app_name }}" 'BEGIN{RS="---"} { i = 0; while ( i <= NF ) { if ($i ~ /^apiVersion:?$/) { kind = 0; name = 0 }; if (kind == 0 && $i ~ /^kind:?$/) { k = tolower($(i+1)); kind = 1; name = 0 }; if ( kind == 1 && name == 0 && $i ~ /^name:?$/) { n = $(i+1); name = 1; print mgmt"/"k"."n".yml"; print > mgmt"/"k"."n".yml"}; i += 1}}'
   changed_when: false
   failed_when: app_kustom_build.stderr|default('') is match('Error')
   register: app_kustom_build
-  loop: "{{ [ app_kustom_dir.results[0].stat.exists|default(false)|ternary(mgmt_dir +'/kustom-'+ app_name, []), kustom_repos[app_name]|default([]), kustom_repos[inventory_hostname]|default([]) ]|flatten }}"
+  loop: "{{ [ app_kustom_dir.results[0].stat.exists|default(false)|ternary(kustomize_dir|default(mgmt_dir) +'/kustom-'+ app_name, []), kustom_repos[app_name]|default([]), kustom_repos[inventory_hostname]|default([]) ]|flatten }}"
 
 - name: Kustomized resource objects stored
   copy:
