@@ -114,7 +114,7 @@
   register: app_templated_files
   when: item|length > 0
   with_lines:
-    - /usr/local/bin/helm template {{ release }} {{ app_chart }} --version {{ app_version }} --debug -f {{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_name }}-values.yaml {% for param in (app_values|default({})|dict2items) %}--set {{ param.key }}="{{ param.value }}" {% endfor %} --output-dir {{ mgmt_dir }}/{{ inventory_hostname }}/helm | sed 's/^wrote //' | head -n -1 | xargs awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/helm/" '/\-\-\-/{d++;next};/^#/{f=mgmt"/"$3;next};{print f"-"d;print >f"-"d}' | uniq
+    - /usr/local/bin/helm template {{ helm_flags|default('') }} {{ release }} {{ app_chart }} --version {{ app_version }} --debug -f {{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_name }}-values.yaml {% for param in (app_values|default({})|dict2items) %}--set {{ param.key }}="{{ param.value }}" {% endfor %} --output-dir {{ mgmt_dir }}/{{ inventory_hostname }}/helm | sed 's/^wrote //' | head -n -1 | xargs awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/helm/" '/\-\-\-/{d++;next};/^#/{f=mgmt"/"$3;next};{print f"-"d;print >f"-"d}' | uniq
 
 - name: Manifest normalized
   set_fact:
