@@ -120,12 +120,12 @@
   set_fact:
     app_specs: "[{% for rs in (app_templated_files.results|map(attribute='stdout')|list) %}{{ rs|from_yaml }}{% if not loop.last -%}, {% endif %}{% endfor %}]"
 
-- name: Application Kustomization detection
+- name: Application Kustomization directory detection
   stat:
-    path: "{{ kustomize_dir|default(mgmt_dir) }}/kustom-{{ app_name }}/kustomization.yaml"
+    path: "{{ item }}"
   register: app_kustom_dir
   with_items: # Display Only
-    - "{{ app_name }}"
+    - "{{ kustomize_dir|default(mgmt_dir) }}/kustom-{{ app_name }}/kustomization.yaml"
 
 - name: Application Kustomization repo active
   debug:
