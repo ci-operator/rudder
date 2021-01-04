@@ -12,14 +12,13 @@
 #   force: boolean/string
 
 - name: Local deployment management directory exists
-  connection: local
   file:
-    path: "{{ item }}/resources"
+    path: "{{ item }}"
     state: directory
     recurse: true
   register: app_mgmt_dir
   with_items: # Display Only
-    - "{{ mgmt_dir }}/{{ inventory_hostname }}"
+    - "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ app_name }}"
 
 - name: Collect commit ref for repo branch head
   shell: git ls-remote {{ item.repo }} {{ item.branch }} | head -c 8
@@ -39,13 +38,13 @@
                (app_config_cm.stderr|default('') is not search('NotFound'))
   register: app_config_cm
 
-- name: App Config found
-  debug: var=app_config_cm.stdout_lines
+# - name: App Config found
+#   debug: var=app_config_cm.stdout_lines
 
 - name: Existing app config loaded
   set_fact:
     app_config: "{{ app_config_cm.stdout|from_yaml }}"
-    app_values_url: "{{ app_repo|regex_replace('git@(.*):(.*).git','https://\\1/\\2') }}/raw/{{ app_branch|default('master') }}/{{ app_value_file|default(app_name) }}-values.yaml"
+    app_values_url: "{{ app_repo|regex_replace('git@(.*):(.*).git','https://\\1/\\2') }}/raw/{{ app_branch|default('master') }}/{{ app_name }}-values.yaml"
   when: app_config_cm.rc == 0
 
 - name: Check for app changes
@@ -71,21 +70,19 @@
     - app_commit
     - app_chart
 
+- name: App name
+  debug: var=app_name
+
 - name: App Owner
   debug: var=app_owner
 
 - name: Application Configuration found
   debug: var=app_config
 
-# - name: Combined parameters normalized 
-#   set_fact:
-#     app_values: "{{ (app_config|default(dict([('data', dict([('app_params', {})]))])))['data']['app_params']|from_yaml|combine(apps_params[app_name]|default(app_params|default('{}'))|from_yaml) }}"
-#   changed_when: false
-
 - name: Application Values to be used
   debug: var=app_values
 
-# - name: Check for Parameter changes # Broken
+# - name: Check for Parameter changes # Broken - FixThis with base64
 #   debug: msg="{{ item != lookup('vars', 'app_params') }}"
 #   ignore_errors: true
 #   register: app_param_variance
@@ -105,26 +102,11 @@
 - name: Chart values fetched
   get_url:
     url: "{{ item }}"
-    dest: "{{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_value_file|default(app_name) }}-values.yaml"
+    dest: "{{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_name }}-values.yaml"
   with_items: # Display Only
-    - "{{ app_repo|regex_replace('(git@|https://)([A-Za-z0-9\\.-]*):?(.*).git','https://\\2/\\3') }}/raw/{{ app_branch|default('master') }}/{{ app_value_file|default(app_name) }}-values.yaml"
-
-# - name: Helm repository initialized
-#   command: helm repo add stable https://kubernetes-charts.storage.googleapis.com/
-#   when: not (app_chart is match('http.*'))
-
-# - name: Helm chart templated
-#   debug: var=item
-#   changed_when: false
-#   vars:
-#     release: "{{ inventory_hostname }}"
-#   register: app_templated_files
-#   when: item|length > 0
-#   with_lines:
-#     - /usr/local/bin/helm template {{ release }} {{ app_chart }} -f {{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_value_file|default(app_name) }}-values.yaml {% for param in (app_values|default({})|dict2items) %}--set {{ param.key }}={{ param.value }} {% endfor %} --output-dir {{ mgmt_dir }}/{{ inventory_hostname }}/helm | sed 's/^wrote //' | head -n -1 | xargs awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/helm/" '/\-\-\-/{d++;next};/^#/{f=mgmt"/"$3;next};{print f"-"d;print >f"-"d}' | uniq
+    - "{{ app_repo|regex_replace('(git@|https://)([A-Za-z0-9\\.-]*):?(.*).git','https://\\2/\\3') }}/raw/{{ app_branch|default('master') }}/{{ app_name }}-values.yaml"
 
 - name: Helm chart templated
-  # debug: var=item
   command: cat "{{ item }}"
   changed_when: false
   vars:
@@ -132,14 +114,70 @@
   register: app_templated_files
   when: item|length > 0
   with_lines:
-    - /usr/local/bin/helm template {{ release }} {{ app_chart }} --version {{ app_version }} --debug -f {{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_value_file|default(app_name) }}-values.yaml {% for param in (app_values|default({})|dict2items) %}--set {{ param.key }}="{{ param.value }}" {% endfor %} --output-dir {{ mgmt_dir }}/{{ inventory_hostname }}/helm | sed 's/^wrote //' | head -n -1 | xargs awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/helm/" '/\-\-\-/{d++;next};/^#/{f=mgmt"/"$3;next};{print f"-"d;print >f"-"d}' | uniq
-    # - /usr/local/bin/helm template {{ release }} {{ app_chart }} --version {{ app_version }} --debug -f {{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_value_file|default(app_name) }}-values.yaml {% for param in (app_values|default({})|dict2items) %}--set {{ param.key }}={{ param.value|regex_replace(('['|regex_escape),'"{')|regex_replace((']'|regex_escape),'}"') }} {% endfor %} --output-dir {{ mgmt_dir }}/{{ inventory_hostname }}/helm | sed 's/^wrote //' | head -n -1 | xargs awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/helm/" '/\-\-\-/{d++;next};/^#/{f=mgmt"/"$3;next};{print f"-"d;print >f"-"d}' | uniq
+    - /usr/local/bin/helm template {{ helm_flags|default('') }} {{ release }} {{ app_chart }} --version {{ app_version }} --debug -f {{ mgmt_dir }}/{{ inventory_hostname }}/{{ app_name }}-values.yaml {% for param in (app_values|default({})|dict2items) %}--set {{ param.key }}="{{ param.value }}" {% endfor %} --output-dir {{ mgmt_dir }}/{{ inventory_hostname }}/helm | sed 's/^wrote //' | head -n -1 | xargs awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/helm/" '/\-\-\-/{d++;next};/^#/{f=mgmt"/"$3;next};{print f"-"d;print >f"-"d}' | uniq
 
 - name: Manifest normalized
   set_fact:
     app_specs: "[{% for rs in (app_templated_files.results|map(attribute='stdout')|list) %}{{ rs|from_yaml }}{% if not loop.last -%}, {% endif %}{% endfor %}]"
 
-### TODO: add metadata.label
+- name: Application Kustomization directory detection
+  stat:
+    path: "{{ item }}"
+  register: app_kustom_dir
+  with_items: # Display Only
+    - "{{ kustomize_dir|default(mgmt_dir) }}/kustom-{{ app_name }}/kustomization.yaml"
+
+- name: Application Kustomization repo active
+  debug:
+    msg: "{{ kustom_repos[item]|default('Undefined') }}"
+  register: app_kustomizer
+  when: (app_kustom_dir.results[0].stat.exists|default(false)) or (kustom_repos[item] is defined)
+  loop: 
+    - "{{ app_name }}"
+    - "{{ inventory_hostname }}"
+
+- name: Kustomize base object list stored
+  copy:
+    dest: "{{ item }}"
+    content: "apiVersion:{{' '}}kustomize.config.k8s.io/v1beta1\nresources:\n{% for tmpl in (app_templated_files.results|map(attribute='item')|list) %}  - {{ tmpl }}\n{% endfor %}"
+  when: (app_kustom_dir.results[0].stat.exists|default(false)) or (kustom_repos[item] is defined)
+  with_items: #Display Only
+    - "{{ mgmt_dir }}/{{ inventory_hostname }}/helm/{{ app_name }}/templates/kustomization.yaml"
+
+- name: Kustomization output directories exists
+  file:
+    path: "{{ item }}"
+    state: directory
+    recurse: true
+  when: (app_kustom_dir.results[0].stat.exists|default(false)) or (kustom_repos[item] is defined)
+  loop:
+    - "{{ mgmt_dir }}/{{ inventory_hostname }}/kustom/{{ app_name }}"
+    - "{{ mgmt_dir }}/{{ inventory_hostname }}/final/{{ app_name }}"
+
+- name: Application Kustomizations
+  debug:
+    msg: "{{ [ app_kustom_dir.results[0].stat.exists|default(false)|ternary(kustomize_dir|default(mgmt_dir) +'/kustom-'+ app_name, []), kustom_repos[app_name]|default([]), kustom_repos[inventory_hostname]|default([]) ]|flatten }}"
+
+- name: Application Kustomization built
+  shell: /usr/local/bin/kustomize build {{ item }} | awk -v mgmt="{{ mgmt_dir }}/{{ inventory_hostname }}/kustom/{{ app_name }}" 'BEGIN{RS="---"} { i = 0; while ( i <= NF ) { if ($i ~ /^apiVersion:?$/) { kind = 0; name = 0 }; if (kind == 0 && $i ~ /^kind:?$/) { k = tolower($(i+1)); kind = 1; name = 0 }; if ( kind == 1 && name == 0 && $i ~ /^name:?$/) { n = $(i+1); name = 1; print mgmt"/"k"."n".yml"; print > mgmt"/"k"."n".yml"}; i += 1}}'
+  changed_when: false
+  failed_when: (app_kustom_build.rc != 0) or
+               (app_kustom_build.stderr|default('') is match('Error'))
+  register: app_kustom_build
+  loop: "{{ [ app_kustom_dir.results[0].stat.exists|default(false)|ternary(kustomize_dir|default(mgmt_dir) +'/kustom-'+ app_name, []), kustom_repos[app_name]|default([]), kustom_repos[inventory_hostname]|default([]) ]|flatten }}"
+
+- debug: var=app_kustom_build
+
+- name: Kustomized resource objects stored
+  copy:
+    content: "{{ item|to_nice_yaml }}"
+    dest: "{{ mgmt_dir }}/{{ inventory_hostname }}/final/{{ app_name }}/{{ k8s_env }}.{{ item.kind }}.{{ item.metadata.name }}.yml"
+  when: (app_kustom_dir.results[0].stat.exists|default(false)) or (kustom_repos[app_name] is defined)
+  register: app_kustom_files
+  loop_control:
+    label: "{{ item.kind }}/{{ item.metadata.name }}"
+  loop: "[{% for file in app_kustom_build.results[0].stdout_lines|default([]) %}{{ lookup('file', file)|from_yaml }}{% if not loop.last -%}, {% endif %}{% endfor %}]"
+
 - name: Templated resource objects stored
   copy:
     dest: "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ k8s_env }}.{{ item.kind|lower }}.{{ item.metadata.name }}.yml"
@@ -148,7 +186,7 @@
   register: app_spec_stored
   loop_control:
     label: "{{ item.kind }}/{{ item.metadata.name }}"
-  loop: "{{ app_specs }}"
+  loop: "{{ (app_kustom_dir.results[0].stat.exists|default(false))|ternary( app_kustom_files.results|map(attribute='item')|list, app_specs ) }}"
 
 - name: Volume dependencies found
   set_fact:
@@ -160,7 +198,7 @@
     resource: "{{ item.item }}"
     deps: "[{% for dep in resource.spec.template.spec.volumes %}{% if dep.emptyDir is not defined %}{{ (dep.persistentVolumeClaim is defined)|ternary(dict([('kind', 'PersistentVolumeClaim'), ('name', dep.persistentVolumeClaim['claimName'])]), (dep.secret is defined)|ternary(dict([('kind', 'Secret'), ('name', dep.secret['secretName'])]), dict([('kind', 'ConfigMap'), ('name', dep.configMap['name'])])))|combine(dict([('parent', dict([('kind', resource.kind), ('name', resource.metadata.name), ('changed', item.changed)]))])) }}{% if not loop.last -%}, {% endif %}{% endif %}{% endfor  %}]"
     dep_q: "[? kind == '{{ resource.kind }}' && name == '{{ resource.metadata.name }}' ]"
-  loop: "{{ app_spec_stored['results'] }}"
+  loop: "{{ ((app_kustom_files is not skipped)|ternary(app_kustom_files, app_spec_stored))['results'] }}"
   register: resource_dependencies
 
 - name: Dependency parents stored
@@ -179,7 +217,7 @@
     dep_q: "[? kind == '{{ resource.kind }}' && name == '{{ resource.metadata.name }}' ]"
     depmap: "{{ app_parents|json_query(dep_q) }}"
   register: resource_depmap
-  loop: "{{ app_spec_stored['results'] }}"
+  loop: "{{ ((app_kustom_files is not skipped)|ternary(app_kustom_files, app_spec_stored))['results'] }}"
 
 - name: Dependency children stored
   set_fact:
@@ -217,4 +255,4 @@
     label: "{{ resource.kind }}/{{ resource.metadata.name }}"
     loop_var: depcheck
 
-# - debug: var=app_inventory
+- debug: var=app_inventory
