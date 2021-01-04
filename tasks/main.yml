@@ -180,7 +180,7 @@
 
 - name: Templated resource objects stored
   copy:
-    dest: "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ k8s_env }}.{{ item.kind|lower }}.{{ item.metadata.name }}.yml"
+    dest: "{{ mgmt_dir }}/{{ inventory_hostname }}/resources/{{ app_name }}/{{ k8s_env }}.{{ item.kind|lower }}.{{ item.metadata.name }}.yml"
     content: "{{ item|to_nice_yaml }}"
     backup: true
   register: app_spec_stored
