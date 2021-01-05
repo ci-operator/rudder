@@ -166,8 +166,6 @@
   register: app_kustom_build
   loop: "{{ [ app_kustom_dir.results[0].stat.exists|default(false)|ternary(kustomize_dir|default(mgmt_dir) +'/kustom-'+ app_name, []), kustom_repos[app_name]|default([]), kustom_repos[inventory_hostname]|default([]) ]|flatten }}"
 
-- debug: var=app_kustom_build
-
 - name: Kustomized resource objects stored
   copy:
     content: "{{ item|to_nice_yaml }}"
@@ -254,5 +252,3 @@
   loop_control:
     label: "{{ resource.kind }}/{{ resource.metadata.name }}"
     loop_var: depcheck
-
-- debug: var=app_inventory
